@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import date, timedelta
 from pathlib import Path
 
 import click
+from dotenv import load_dotenv
 
 from smae import __version__
+
+load_dotenv()
 
 
 @click.group()
@@ -62,28 +66,69 @@ def briefing(
     asyncio.run(_run_briefing(briefing_date, since, output))
 
 
+def _build_sources() -> list:
+    """Instantiate source adapters from environment variables."""
+    from smae.sources.acled import ACLEDAdapter
+    from smae.sources.gfw import GFWAdapter
+    from smae.sources.idmc import IDMCAdapter
+
+    sources = []
+
+    acled_email = os.environ.get("SMAE_ACLED_EMAIL")
+    acled_password = os.environ.get("SMAE_ACLED_PASSWORD")
+    if acled_email and acled_password:
+        sources.append(ACLEDAdapter(
+            credentials={"email": acled_email, "password": acled_password},
+        ))
+        click.echo("  [+] ACLED adapter configured")
+
+    gfw_key = os.environ.get("SMAE_GFW_KEY")
+    if gfw_key:
+        sources.append(GFWAdapter(api_key=gfw_key))
+        click.echo("  [+] GFW adapter configured")
+    else:
+        sources.append(GFWAdapter())
+        click.echo("  [~] GFW adapter configured (no API key — may be rate-limited)")
+
+    idmc_key = os.environ.get("SMAE_IDMC_KEY")
+    sources.append(IDMCAdapter(api_key=idmc_key))
+    click.echo(f"  [+] IDMC adapter configured{'' if idmc_key else ' (no API key)'}")
+
+    return sources
+
+
 async def _run_briefing(briefing_date: date, since: date, output: Path) -> None:
     """Run the analytical pipeline and generate a briefing PDF."""
     from smae.engine.pipeline import AnalyticalPipeline
     from smae.pdf.generator import generate_daily_briefing
 
-    pipeline = AnalyticalPipeline()
+    sources = _build_sources()
+    pipeline = AnalyticalPipeline(sources=sources)
 
-    # Run the pipeline (will return empty results with no sources configured)
-    result = await pipeline.run(since)
+    try:
+        result = await pipeline.run(since)
+    finally:
+        for src in sources:
+            await src.close()
 
     if not result.events:
         click.echo(
-            "No data sources configured. Register API keys for ACLED, GFW, IDMC, etc.\n"
-            "See: smae sources --help"
+            "\nNo events returned from configured sources. "
+            "Check credentials and network connectivity."
         )
         click.echo("Generating empty briefing template...")
+    else:
+        click.echo(
+            f"\n{len(result.events)} events ingested, "
+            f"{len(result.alert_events)} at ALERT level or above, "
+            f"{len(result.convergence_nodes)} convergence nodes."
+        )
 
     generate_daily_briefing(
         events=result.events,
         briefing_date=briefing_date,
         executive_summary=(
-            "No events ingested. Configure data source API keys to populate briefings."
+            "No events ingested. Check data source credentials and connectivity."
             if not result.events
             else f"{len(result.events)} events analyzed across "
             f"{len(set(n for e in result.events for n in e.networks))} metabolic networks. "
