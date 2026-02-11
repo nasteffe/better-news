@@ -24,8 +24,14 @@ class SourceAdapter(ABC):
     networks: ClassVar[tuple[MetabolicNetwork, ...]]
     base_url: ClassVar[str]
 
-    def __init__(self, api_key: str | None = None, timeout: float = 30.0):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        credentials: dict[str, str] | None = None,
+        timeout: float = 30.0,
+    ):
         self._api_key = api_key
+        self._credentials = credentials or {}
         self._client = httpx.AsyncClient(timeout=timeout)
 
     async def close(self) -> None:

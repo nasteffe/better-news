@@ -3,6 +3,10 @@
 Provides armed conflict event data, updated weekly. Primarily feeds
 Network I (Carbon) and Network IV (Mineral) analysis — resource conflicts,
 extractive violence, and resistance events.
+
+Authentication: ACLED uses OAuth token-based authentication. Requires
+a registered account (email + password) at acleddata.com. The adapter
+obtains a 24-hour access token and refreshes automatically.
 """
 
 from __future__ import annotations
@@ -19,9 +23,16 @@ from smae.models.enums import (
 from smae.models.events import Event, Source
 from smae.sources.base import SourceAdapter
 
+TOKEN_URL = "https://acleddata.com/oauth/token"
+API_URL = "https://acleddata.com/api/acled/read"
+
 
 class ACLEDAdapter(SourceAdapter):
-    """Adapter for the ACLED conflict event database."""
+    """Adapter for the ACLED conflict event database.
+
+    Requires credentials dict with 'email' and 'password' keys,
+    corresponding to a registered myACLED account.
+    """
 
     name: ClassVar[str] = "acled"
     tier: ClassVar[SourceTier] = SourceTier.SPECIALIZED_RESEARCH
@@ -29,7 +40,39 @@ class ACLEDAdapter(SourceAdapter):
         MetabolicNetwork.CARBON,
         MetabolicNetwork.MINERAL,
     )
-    base_url: ClassVar[str] = "https://api.acleddata.com/acled/read"
+    base_url: ClassVar[str] = API_URL
+
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self._access_token: str | None = None
+
+    async def _authenticate(self) -> None:
+        """Obtain an OAuth access token from ACLED."""
+        email = self._credentials.get("email", "")
+        password = self._credentials.get("password", "")
+        if not email or not password:
+            raise ValueError(
+                "ACLED requires 'email' and 'password' in credentials. "
+                "Register at https://acleddata.com to obtain an account."
+            )
+
+        resp = await self._client.post(
+            TOKEN_URL,
+            data={
+                "username": email,
+                "password": password,
+                "grant_type": "password",
+                "client_id": "acled",
+            },
+        )
+        resp.raise_for_status()
+        token_data = resp.json()
+        self._access_token = token_data["access_token"]
+
+    async def _ensure_authenticated(self) -> None:
+        """Authenticate if we don't have a valid token."""
+        if self._access_token is None:
+            await self._authenticate()
 
     async def fetch_events(self, since: date) -> list[Event]:
         """Fetch ACLED events since given date.
@@ -37,15 +80,23 @@ class ACLEDAdapter(SourceAdapter):
         Returns tagged Event objects with conflict data mapped to
         SMAE ontology nodes and metabolic networks.
         """
+        await self._ensure_authenticated()
+
         params = {
             "event_date": since.isoformat(),
             "event_date_where": ">=",
             "limit": 500,
         }
-        if self._api_key:
-            params["key"] = self._api_key
+        headers = {"Authorization": f"Bearer {self._access_token}"}
 
-        resp = await self._client.get(self.base_url, params=params)
+        resp = await self._client.get(self.base_url, params=params, headers=headers)
+
+        # Re-authenticate on 401 and retry once
+        if resp.status_code == 401:
+            await self._authenticate()
+            headers["Authorization"] = f"Bearer {self._access_token}"
+            resp = await self._client.get(self.base_url, params=params, headers=headers)
+
         resp.raise_for_status()
         data = resp.json()
 

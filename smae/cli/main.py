@@ -132,8 +132,10 @@ def sources() -> None:
     for name, desc, tier in adapters:
         click.echo(f"  {name:<8}  [Tier {tier.value}]  {desc}")
     click.echo(
-        "\nConfigure API keys via environment variables:"
-        "\n  SMAE_ACLED_KEY, SMAE_GFW_KEY, SMAE_IDMC_KEY"
+        "\nConfigure credentials via environment variables:"
+        "\n  ACLED:  SMAE_ACLED_EMAIL, SMAE_ACLED_PASSWORD  (OAuth account)"
+        "\n  GFW:    SMAE_GFW_KEY                           (API key, optional)"
+        "\n  IDMC:   SMAE_IDMC_KEY                          (API key, optional)"
     )
 
 
