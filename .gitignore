@@ -31,3 +31,13 @@ Thumbs.db
 htmlcov/
 .coverage
 coverage.xml
+
+# Dashboard frontend
+dashboard/node_modules/
+dashboard/dist/
+
+# Reports output
+reports/
+
+# Plan file
+plan.md

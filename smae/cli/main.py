@@ -272,5 +272,26 @@ def sources() -> None:
     )
 
 
+@cli.command()
+@click.option("--host", default="127.0.0.1", help="Bind host.")
+@click.option("--port", "-p", default=8000, help="Bind port.")
+@click.option(
+    "--static",
+    type=click.Path(exists=True, path_type=Path),
+    default=None,
+    help="Path to built frontend static files (dashboard/dist).",
+)
+def serve(host: str, port: int, static: Path | None) -> None:
+    """Start the SMAE dashboard web server."""
+    import uvicorn
+
+    from smae.api.app import create_app
+
+    app = create_app(static_dir=static)
+    click.echo(f"SMAE Dashboard — http://{host}:{port}")
+    click.echo("API docs at /docs")
+    uvicorn.run(app, host=host, port=port)
+
+
 if __name__ == "__main__":
     cli()
