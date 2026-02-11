@@ -229,6 +229,21 @@ class TestPipelineVerify:
         assert all(s.provisional for s in result[0].sources)
 
 
+class _FakeSource:
+    """Minimal source that satisfies the DataSource protocol."""
+
+    name = "fake"
+
+    def __init__(self, events: list[Event] | None = None, error: Exception | None = None):
+        self._events = events or []
+        self._error = error
+
+    async def fetch_events(self, since: date) -> list[Event]:
+        if self._error:
+            raise self._error
+        return self._events
+
+
 class TestPipelineFullRun:
     def test_empty_pipeline_returns_empty_result(self):
         pipeline = AnalyticalPipeline()
@@ -237,3 +252,49 @@ class TestPipelineFullRun:
         assert result.events == []
         assert result.threshold_crossings == []
         assert result.convergence_nodes == []
+
+
+class TestPipelineIntake:
+    """Tests for resilient, concurrent source intake."""
+
+    def test_single_source_returns_events(self):
+        events = [_make_event(id="src-001")]
+        pipeline = AnalyticalPipeline(sources=[_FakeSource(events=events)])
+        result = asyncio.run(pipeline.intake(date(2026, 2, 9)))
+        assert len(result) == 1
+        assert result[0].id == "src-001"
+
+    def test_multiple_sources_merged(self):
+        src_a = _FakeSource(events=[_make_event(id="a-001")])
+        src_b = _FakeSource(events=[_make_event(id="b-001"), _make_event(id="b-002")])
+        pipeline = AnalyticalPipeline(sources=[src_a, src_b])
+        result = asyncio.run(pipeline.intake(date(2026, 2, 9)))
+        assert len(result) == 3
+        ids = {e.id for e in result}
+        assert ids == {"a-001", "b-001", "b-002"}
+
+    def test_failing_source_does_not_crash_pipeline(self):
+        good = _FakeSource(events=[_make_event(id="good-001")])
+        bad = _FakeSource(error=ConnectionError("network down"))
+        pipeline = AnalyticalPipeline(sources=[good, bad])
+        result = asyncio.run(pipeline.intake(date(2026, 2, 9)))
+        assert len(result) == 1
+        assert result[0].id == "good-001"
+        assert len(pipeline._source_errors) == 1
+        assert "fake" in pipeline._source_errors[0][0]
+
+    def test_all_sources_fail_returns_empty(self):
+        bad1 = _FakeSource(error=TimeoutError("timeout"))
+        bad2 = _FakeSource(error=ValueError("bad data"))
+        pipeline = AnalyticalPipeline(sources=[bad1, bad2])
+        result = asyncio.run(pipeline.intake(date(2026, 2, 9)))
+        assert result == []
+        assert len(pipeline._source_errors) == 2
+
+    def test_full_run_with_failing_source(self):
+        good = _FakeSource(events=[_make_event(id="ok-001")])
+        bad = _FakeSource(error=RuntimeError("auth failed"))
+        pipeline = AnalyticalPipeline(sources=[good, bad])
+        result = asyncio.run(pipeline.run(date(2026, 2, 9)))
+        assert len(result.events) == 1
+        assert result.events[0].id == "ok-001"

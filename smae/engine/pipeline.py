@@ -13,6 +13,8 @@ Implements the seven-stage daily analytical cycle:
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol, Sequence
@@ -21,6 +23,8 @@ from smae.models.convergence import ConvergenceScore
 from smae.models.enums import AlertLevel, MetabolicNetwork, ThresholdStatus
 from smae.models.events import Event, ThresholdCrossing, ThresholdMetric
 from smae.models.thresholds import ALL_THRESHOLDS, ThresholdDefinition
+
+logger = logging.getLogger(__name__)
 
 
 class DataSource(Protocol):
@@ -53,12 +57,25 @@ class AnalyticalPipeline:
 
     # --- Stage 0: INTAKE ---
 
+    async def _fetch_one(self, source: DataSource, since: date) -> list[Event]:
+        """Fetch from a single source, returning empty list on failure."""
+        try:
+            return await source.fetch_events(since)
+        except Exception as exc:
+            name = getattr(source, "name", type(source).__name__)
+            logger.warning("Source %s failed: %s", name, exc)
+            self._source_errors.append((name, exc))
+            return []
+
     async def intake(self, since: date) -> list[Event]:
-        """Scan all registered source feeds for events since given date."""
+        """Scan all registered source feeds concurrently."""
+        self._source_errors: list[tuple[str, Exception]] = []
+        results = await asyncio.gather(
+            *(self._fetch_one(src, since) for src in self._sources)
+        )
         all_events: list[Event] = []
-        for source in self._sources:
-            events = await source.fetch_events(since)
-            all_events.extend(events)
+        for batch in results:
+            all_events.extend(batch)
         return all_events
 
     # --- Stage 1: TAG ---
