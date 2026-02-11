@@ -1,7 +1,8 @@
 """Global Forest Watch (GFW) source adapter.
 
 Provides near-real-time deforestation alerts and forest change data.
-Feeds Network I (Carbon) and Network III (Soil) analysis.
+Feeds Network I (Carbon), Network III (Soil), and Network VI (Biodiversity)
+analysis — deforestation as carbon release, soil fertility loss, and habitat destruction.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ class GFWAdapter(SourceAdapter):
     networks: ClassVar[tuple[MetabolicNetwork, ...]] = (
         MetabolicNetwork.CARBON,
         MetabolicNetwork.SOIL,
+        MetabolicNetwork.BIODIVERSITY,
     )
     base_url: ClassVar[str] = "https://data-api.globalforestwatch.org"
 

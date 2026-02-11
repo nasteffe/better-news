@@ -4,13 +4,16 @@ from enum import Enum, IntEnum
 
 
 class MetabolicNetwork(IntEnum):
-    """The five metabolic networks through which all events are analyzed."""
+    """The eight metabolic networks through which all events are analyzed."""
 
     CARBON = 1       # Carbon Accumulation
     WATER = 2        # Water Appropriation
     SOIL = 3         # Soil Fertility Transfer
     MINERAL = 4      # Mineral Extraction
     ATMOSPHERIC = 5  # Atmospheric Commons Degradation
+    BIODIVERSITY = 6 # Biodiversity & Genetic Commons
+    OCEAN = 7        # Ocean & Marine Appropriation
+    LABOR = 8        # Labor & Embodied Health
 
     @property
     def label(self) -> str:
@@ -20,12 +23,18 @@ class MetabolicNetwork(IntEnum):
             3: "Soil Fertility Transfer",
             4: "Mineral Extraction",
             5: "Atmospheric Commons Degradation",
+            6: "Biodiversity & Genetic Commons",
+            7: "Ocean & Marine Appropriation",
+            8: "Labor & Embodied Health",
         }
         return labels[self.value]
 
     @property
     def roman(self) -> str:
-        numerals = {1: "I", 2: "II", 3: "III", 4: "IV", 5: "V"}
+        numerals = {
+            1: "I", 2: "II", 3: "III", 4: "IV", 5: "V",
+            6: "VI", 7: "VII", 8: "VIII",
+        }
         return numerals[self.value]
 
 

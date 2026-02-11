@@ -40,6 +40,9 @@ class TestMetabolicNetwork:
         assert MetabolicNetwork.SOIL.label == "Soil Fertility Transfer"
         assert MetabolicNetwork.MINERAL.label == "Mineral Extraction"
         assert MetabolicNetwork.ATMOSPHERIC.label == "Atmospheric Commons Degradation"
+        assert MetabolicNetwork.BIODIVERSITY.label == "Biodiversity & Genetic Commons"
+        assert MetabolicNetwork.OCEAN.label == "Ocean & Marine Appropriation"
+        assert MetabolicNetwork.LABOR.label == "Labor & Embodied Health"
 
     def test_roman_numerals(self):
         assert MetabolicNetwork.CARBON.roman == "I"
@@ -47,9 +50,12 @@ class TestMetabolicNetwork:
         assert MetabolicNetwork.SOIL.roman == "III"
         assert MetabolicNetwork.MINERAL.roman == "IV"
         assert MetabolicNetwork.ATMOSPHERIC.roman == "V"
+        assert MetabolicNetwork.BIODIVERSITY.roman == "VI"
+        assert MetabolicNetwork.OCEAN.roman == "VII"
+        assert MetabolicNetwork.LABOR.roman == "VIII"
 
-    def test_all_five_networks(self):
-        assert len(MetabolicNetwork) == 5
+    def test_all_eight_networks(self):
+        assert len(MetabolicNetwork) == 8
 
 
 class TestCouplingPattern:

@@ -68,3 +68,27 @@ def test_cli_sources_command():
     assert "ACLED" in result.output
     assert "GFW" in result.output
     assert "IDMC" in result.output
+
+
+def test_cli_networks_shows_all_eight():
+    """The 'networks' command shows all eight metabolic networks."""
+    from smae.cli.main import cli
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["networks"])
+    assert result.exit_code == 0
+    assert "Carbon Accumulation" in result.output
+    assert "Biodiversity" in result.output
+    assert "Ocean" in result.output
+    assert "Labor" in result.output
+    assert "VIII" in result.output
+
+
+def test_cli_convergence_help():
+    """The 'convergence' command exists and has help text."""
+    from smae.cli.main import cli
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["convergence", "--help"])
+    assert result.exit_code == 0
+    assert "30-day" in result.output

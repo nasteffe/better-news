@@ -38,7 +38,7 @@ CONTAMINATION_BRIGHT_LINE = ThresholdDefinition(
     name="contamination_who_limits",
     category=ThresholdCategory.ABSOLUTE,
     description="Contamination above WHO limits affecting >50 000 persons",
-    networks=(MetabolicNetwork.WATER, MetabolicNetwork.ATMOSPHERIC),
+    networks=(MetabolicNetwork.WATER, MetabolicNetwork.ATMOSPHERIC, MetabolicNetwork.OCEAN),
     threshold_value=50_000,
     unit="persons",
 )
@@ -85,7 +85,7 @@ DEFORESTATION_SIGMA = ThresholdDefinition(
     name="deforestation_anomaly",
     category=ThresholdCategory.RATE_OF_CHANGE,
     description="Deforestation >3 sigma above 5-year mean for any jurisdiction",
-    networks=(MetabolicNetwork.CARBON, MetabolicNetwork.SOIL),
+    networks=(MetabolicNetwork.CARBON, MetabolicNetwork.SOIL, MetabolicNetwork.BIODIVERSITY),
     threshold_value=3.0,
     unit="sigma above 5y mean",
 )
@@ -179,6 +179,93 @@ WHISTLEBLOWER_PROTECTION_ELIMINATED = ThresholdDefinition(
     unit="event",
 )
 
+# --- Network VI: Biodiversity & Genetic Commons ---
+
+SPECIES_EXTINCTION_RATE = ThresholdDefinition(
+    name="species_extinction_rate",
+    category=ThresholdCategory.RATE_OF_CHANGE,
+    description="IUCN Red List uplisting rate >2x 10-year baseline in any taxon/region",
+    networks=(MetabolicNetwork.BIODIVERSITY,),
+    threshold_value=2.0,
+    unit="rate multiplier vs 10y baseline",
+)
+
+HABITAT_LOSS_BRIGHT_LINE = ThresholdDefinition(
+    name="habitat_loss_single_event",
+    category=ThresholdCategory.ABSOLUTE,
+    description="Critical habitat destruction >10 000 ha in single event/concession",
+    networks=(MetabolicNetwork.BIODIVERSITY, MetabolicNetwork.CARBON),
+    threshold_value=10_000,
+    unit="ha",
+)
+
+GENETIC_RESOURCE_ENCLOSURE = ThresholdDefinition(
+    name="genetic_resource_enclosure",
+    category=ThresholdCategory.GOVERNANCE_DECAY,
+    description="DSI/genetic resource IP capture without benefit-sharing agreement",
+    networks=(MetabolicNetwork.BIODIVERSITY,),
+    threshold_value=1,
+    unit="event",
+)
+
+# --- Network VII: Ocean & Marine Appropriation ---
+
+FISHERIES_STOCK_COLLAPSE = ThresholdDefinition(
+    name="fisheries_stock_collapse",
+    category=ThresholdCategory.ABSOLUTE,
+    description="Fish stock biomass <20% of unfished level in managed fishery",
+    networks=(MetabolicNetwork.OCEAN,),
+    threshold_value=20,
+    unit="% of B0",
+)
+
+DEEP_SEA_MINING_AREA = ThresholdDefinition(
+    name="deep_sea_mining_area",
+    category=ThresholdCategory.ABSOLUTE,
+    description="Deep-sea mining exploration/extraction licence >50 000 km²",
+    networks=(MetabolicNetwork.OCEAN, MetabolicNetwork.MINERAL),
+    threshold_value=50_000,
+    unit="km²",
+)
+
+MARINE_CONTAMINATION = ThresholdDefinition(
+    name="marine_contamination",
+    category=ThresholdCategory.RELATIONAL,
+    description="Marine pollution concentration >5x safe ecological limit in coastal zone",
+    networks=(MetabolicNetwork.OCEAN, MetabolicNetwork.WATER),
+    threshold_value=5.0,
+    unit="concentration ratio",
+)
+
+# --- Network VIII: Labor & Embodied Health ---
+
+FORCED_LABOR_BRIGHT_LINE = ThresholdDefinition(
+    name="forced_labor_incidents",
+    category=ThresholdCategory.ABSOLUTE,
+    description="Documented forced/bonded labor >500 persons in single supply chain",
+    networks=(MetabolicNetwork.LABOR,),
+    threshold_value=500,
+    unit="persons",
+)
+
+OCCUPATIONAL_FATALITY_RATE = ThresholdDefinition(
+    name="occupational_fatality_rate",
+    category=ThresholdCategory.RATE_OF_CHANGE,
+    description="Extractive sector occupational fatality rate >3x national mean",
+    networks=(MetabolicNetwork.LABOR, MetabolicNetwork.MINERAL),
+    threshold_value=3.0,
+    unit="rate ratio vs national mean",
+)
+
+LABOR_RIGHTS_ROLLBACK = ThresholdDefinition(
+    name="labor_rights_rollback",
+    category=ThresholdCategory.GOVERNANCE_DECAY,
+    description="ILO core convention derogation or labor inspection defunding >30%",
+    networks=(MetabolicNetwork.LABOR,),
+    threshold_value=1,
+    unit="event",
+)
+
 
 # All thresholds for iteration
 ALL_THRESHOLDS: list[ThresholdDefinition] = [
@@ -198,4 +285,16 @@ ALL_THRESHOLDS: list[ThresholdDefinition] = [
     AGENCY_BUDGET_CUT,
     FPIC_WEAKENED,
     WHISTLEBLOWER_PROTECTION_ELIMINATED,
+    # Network VI: Biodiversity & Genetic Commons
+    SPECIES_EXTINCTION_RATE,
+    HABITAT_LOSS_BRIGHT_LINE,
+    GENETIC_RESOURCE_ENCLOSURE,
+    # Network VII: Ocean & Marine Appropriation
+    FISHERIES_STOCK_COLLAPSE,
+    DEEP_SEA_MINING_AREA,
+    MARINE_CONTAMINATION,
+    # Network VIII: Labor & Embodied Health
+    FORCED_LABOR_BRIGHT_LINE,
+    OCCUPATIONAL_FATALITY_RATE,
+    LABOR_RIGHTS_ROLLBACK,
 ]

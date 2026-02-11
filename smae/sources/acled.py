@@ -1,8 +1,9 @@
 """ACLED (Armed Conflict Location & Event Data) source adapter.
 
 Provides armed conflict event data, updated weekly. Primarily feeds
-Network I (Carbon) and Network IV (Mineral) analysis — resource conflicts,
-extractive violence, and resistance events.
+Network I (Carbon), Network IV (Mineral), and Network VIII (Labor)
+analysis — resource conflicts, extractive violence, labor-related
+repression, and resistance events.
 
 Authentication: ACLED uses OAuth token-based authentication. Requires
 a registered account (email + password) at acleddata.com. The adapter
@@ -134,6 +135,13 @@ class ACLEDAdapter(SourceAdapter):
 
         fatalities = int(record.get("fatalities", 0))
 
+        # Extend network tagging based on event content
+        networks = list(self.networks)
+        notes_lower = record.get("notes", "").lower()
+        if any(kw in notes_lower for kw in ("labor", "labour", "worker", "mine ", "mining")):
+            if MetabolicNetwork.LABOR not in networks:
+                networks.append(MetabolicNetwork.LABOR)
+
         return Event(
             id=f"acled-{record.get('data_id', 'unknown')}",
             title=f"{event_type}: {sub_event}" if sub_event else event_type,
@@ -150,7 +158,7 @@ class ACLEDAdapter(SourceAdapter):
                 if record.get("latitude") and record.get("longitude")
                 else None
             ),
-            networks=list(self.networks),
+            networks=networks,
             layers=layers,
             nodes=nodes,
             sources=[

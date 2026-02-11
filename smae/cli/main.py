@@ -21,7 +21,7 @@ def cli() -> None:
     """Socio-Metabolic Analytical Engine (SMAE).
 
     Tracking global resource appropriation, cost displacement,
-    and frontline resistance across five metabolic networks.
+    and frontline resistance across eight metabolic networks.
     """
 
 
@@ -142,8 +142,96 @@ async def _run_briefing(briefing_date: date, since: date, output: Path) -> None:
 
 
 @cli.command()
+@click.option(
+    "--end-date",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help="End of reporting period (YYYY-MM-DD). Defaults to today.",
+)
+@click.option(
+    "--days",
+    type=int,
+    default=30,
+    help="Reporting period length in days (default: 30).",
+)
+@click.option(
+    "--output", "-o",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Output PDF path.",
+)
+def convergence(
+    end_date: date | None,
+    days: int,
+    output: Path | None,
+) -> None:
+    """Generate a 30-day convergence report PDF."""
+    if end_date is None:
+        end_date = date.today()
+    else:
+        end_date = end_date.date()
+
+    start_date = end_date - timedelta(days=days)
+
+    if output is None:
+        output = Path(f"convergence_{start_date.isoformat()}_{end_date.isoformat()}.pdf")
+
+    click.echo(f"SMAE Convergence Report — {start_date.isoformat()} / {end_date.isoformat()}")
+    click.echo(f"Scanning {days}-day period across all eight metabolic networks...")
+
+    asyncio.run(_run_convergence(start_date, end_date, output))
+
+
+async def _run_convergence(start_date: date, end_date: date, output: Path) -> None:
+    """Run the pipeline and generate a convergence report."""
+    from smae.engine.pipeline import AnalyticalPipeline
+    from smae.pdf.generator import generate_convergence_report
+
+    sources = _build_sources()
+    pipeline = AnalyticalPipeline(sources=sources)
+
+    try:
+        result = await pipeline.run(start_date)
+    finally:
+        for src in sources:
+            await src.close()
+
+    if not result.events:
+        click.echo(
+            "\nNo events returned from configured sources. "
+            "Check credentials and network connectivity."
+        )
+        click.echo("Generating empty convergence report template...")
+    else:
+        click.echo(
+            f"\n{len(result.events)} events ingested, "
+            f"{len(result.convergence_nodes)} convergence nodes, "
+            f"{len(result.threshold_crossings)} threshold crossings."
+        )
+
+    generate_convergence_report(
+        events=result.events,
+        convergence_scores=result.convergence_nodes,
+        period_start=start_date,
+        period_end=end_date,
+        executive_summary=(
+            "No events ingested. Check data source credentials and connectivity."
+            if not result.events
+            else f"{len(result.events)} events analyzed across "
+            f"{len(set(n for e in result.events for n in e.networks))} metabolic networks "
+            f"over {(end_date - start_date).days}-day period. "
+            f"{len(result.threshold_crossings)} threshold crossings detected. "
+            f"{len(result.convergence_nodes)} convergence nodes identified."
+        ),
+        outlook_rows=[],
+        output_path=output,
+    )
+    click.echo(f"Convergence report written to {output}")
+
+
+@cli.command()
 def networks() -> None:
-    """List the five metabolic networks."""
+    """List the eight metabolic networks."""
     from smae.models.enums import MetabolicNetwork
 
     for n in MetabolicNetwork:
